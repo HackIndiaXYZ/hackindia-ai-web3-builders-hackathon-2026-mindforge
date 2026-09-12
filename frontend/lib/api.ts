@@ -170,6 +170,19 @@ export const MOCK_CATEGORIES = [
   "Finance & Tax",
 ];
 
+export function getApiBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return "http://localhost:8000/api/v1";
+    }
+  }
+  return "https://agentforge.onrender.com/api/v1";
+}
+
 export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = getAuthToken();
   const headers: Record<string, string> = {
@@ -181,11 +194,15 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  const isHeavyCall = endpoint.includes("/onboarding") || endpoint.includes("/deploy") || endpoint.includes("/knowledge");
+  const timeoutMs = isHeavyCall ? 60000 : 20000;
+  const baseUrl = getApiBaseUrl();
+
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const response = await fetch(`${baseUrl}${endpoint}`, {
       ...options,
       headers,
       signal: controller.signal,
@@ -195,7 +212,22 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
     if (response.ok) {
       return await response.json();
     }
-  } catch (err) {
+
+    // Capture exact HTTP error message from backend
+    let errorDetail = `Request failed with status ${response.status}`;
+    try {
+      const errJson = await response.json();
+      if (errJson && errJson.detail) {
+        errorDetail = typeof errJson.detail === "string" ? errJson.detail : JSON.stringify(errJson.detail);
+      }
+    } catch {}
+    throw new Error(errorDetail);
+
+  } catch (err: any) {
+    // If it's a known backend HTTP error, re-throw it so UI can show proper feedback
+    if (err && err.message && !err.message.includes("aborted") && !err.message.includes("Failed to fetch") && !err.message.includes("NetworkError")) {
+      throw err;
+    }
     // Network or server unreachable; handle fallback gracefully below
   }
 

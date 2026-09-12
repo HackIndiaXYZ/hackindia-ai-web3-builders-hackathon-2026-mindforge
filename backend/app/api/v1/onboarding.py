@@ -22,7 +22,7 @@ from app.schemas.schemas import (
 from app.services.crawler import crawl_website
 from app.services.chunker import chunk_text
 from app.services.embedder import compute_embeddings
-from app.services.groq_client import call_groq
+from app.services.gemini_client import call_gemini
 
 router = APIRouter(tags=["AI Onboarding"])
 
@@ -157,7 +157,7 @@ async def init_onboarding_from_url(
     if payload.business_notes:
         aggregated_text += f"\n\n--- OWNER NOTES ---\n{payload.business_notes}"
 
-    # 4. Extract initial profile with Groq
+    # 4. Extract initial profile with Gemini
     messages = [
         {"role": "system", "content": EXTRACTOR_SYSTEM_PROMPT},
         {"role": "user", "content": f"Analyze this content for {ws.name} ({ws.category}) and extract the business profile:\n\n{aggregated_text[:8000]}"}
@@ -165,8 +165,8 @@ async def init_onboarding_from_url(
 
     extracted_json = {}
     try:
-        groq_resp = await call_groq(messages=messages, temperature=0.2)
-        raw_content = groq_resp["choices"][0]["message"]["content"].strip()
+        gemini_resp = await call_gemini(messages=messages, temperature=0.2)
+        raw_content = gemini_resp["choices"][0]["message"]["content"].strip()
         clean_json = raw_content
         if "```json" in clean_json:
             clean_json = clean_json.split("```json")[1].split("```")[0].strip()
@@ -277,8 +277,8 @@ async def start_onboarding_existing(id: UUID, payload: OnboardingStartRequest, d
 
     extracted_json = {}
     try:
-        groq_resp = await call_groq(messages=messages, temperature=0.2)
-        raw_content = groq_resp["choices"][0]["message"]["content"].strip()
+        gemini_resp = await call_gemini(messages=messages, temperature=0.2)
+        raw_content = gemini_resp["choices"][0]["message"]["content"].strip()
         clean_json = raw_content
         if "```json" in clean_json:
             clean_json = clean_json.split("```json")[1].split("```")[0].strip()
@@ -374,8 +374,8 @@ Return JSON ONLY matching:
 
     result_json = {}
     try:
-        groq_resp = await call_groq(messages=messages, temperature=0.3)
-        raw_content = groq_resp["choices"][0]["message"]["content"].strip()
+        gemini_resp = await call_gemini(messages=messages, temperature=0.3)
+        raw_content = gemini_resp["choices"][0]["message"]["content"].strip()
         clean_json = raw_content
         if "```json" in clean_json:
             clean_json = clean_json.split("```json")[1].split("```")[0].strip()
@@ -426,10 +426,10 @@ Return JSON ONLY matching:
     )
 
 @router.post("/workspaces/{id}/onboarding/deploy", response_model=OnboardingDeployResponse)
-def deploy_onboarded_agent(id: UUID, db: Session = Depends(get_db)):
+async def deploy_onboarded_agent(id: UUID, db: Session = Depends(get_db)):
     """
-    Finalize system prompt from the completed Business Brain, set status to 'published',
-    and return the dedicated URL and embed snippet.
+    Finalize system prompt from the completed Business Brain using Gemini,
+    set status to 'published', and return the dedicated URL and embed snippet.
     """
     ws = db.query(Workspace).filter(Workspace.id == id).first()
     profile = db.query(BusinessProfile).filter(BusinessProfile.workspace_id == id).first()
@@ -457,6 +457,18 @@ Instructions:
 3. If the customer expresses interest in products or quotes, capture their contact details as a lead.
 4. If a question is outside your knowledge, politely offer human escalation.
 """
+
+    try:
+        synth_messages = [
+            {"role": "system", "content": "You are a master AI agent architect. Generate an authoritative, comprehensive operational system policy prompt for an autonomous AI business employee representing this company."},
+            {"role": "user", "content": f"Business Name: {ws.name}\nCategory: {ws.category}\nSummary: {profile.summary}\nHours: {hours_info}\nServices: {services_info}\nPolicies: {policies_info}\nTone: {profile.tone}\n\nGenerate the complete operational policy prompt for the agent runtime."}
+        ]
+        synth_resp = await call_gemini(synth_messages, temperature=0.2)
+        custom_policy = synth_resp["choices"][0]["message"]["content"].strip()
+        if len(custom_policy) > 100:
+            final_system_policy = custom_policy
+    except Exception:
+        pass
 
     now = datetime.now(timezone.utc)
     config.system_policy = final_system_policy
