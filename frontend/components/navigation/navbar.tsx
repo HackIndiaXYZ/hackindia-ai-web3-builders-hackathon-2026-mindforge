@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme-provider";
+import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import {
   Sun,
@@ -31,14 +32,7 @@ export function Navbar() {
     <header className="h-16 border-b border-border bg-surface/80 backdrop-blur-md sticky top-0 z-40 px-6 sm:px-10 flex items-center justify-between transition-colors">
       {/* Brand Logo */}
       <div className="flex items-center gap-3">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded bg-primary-text text-background flex items-center justify-center font-bold text-xs tracking-tight">
-            AF
-          </div>
-          <span className="font-semibold text-base tracking-tight text-primary-text">
-            AgentForge
-          </span>
-        </Link>
+        <Logo size={28} />
       </div>
 
       {/* Desktop Navigation Links */}

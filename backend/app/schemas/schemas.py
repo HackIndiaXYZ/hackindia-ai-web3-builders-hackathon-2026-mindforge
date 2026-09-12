@@ -14,6 +14,7 @@ class RegisterResponse(BaseModel):
     message: str
     email: str
     requires_otp: bool = True
+    dev_otp: Optional[str] = None
 
 class VerifySignupOtpRequest(BaseModel):
     email: str = Field(..., description="User email address")

@@ -46,6 +46,7 @@ class Workspace(Base):
     website_url = Column(String, nullable=True)
     is_public = Column(Boolean, nullable=False, default=True)
     status = Column(String, nullable=False, default="active")
+    tier = Column(String, nullable=False, default="starter") # 'starter', 'growth', 'enterprise'
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
 

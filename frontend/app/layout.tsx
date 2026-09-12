@@ -7,6 +7,14 @@ import { AgentForgeProvider } from "@/lib/mock-data";
 export const metadata: Metadata = {
   title: "AgentForge — Business AI-Agent Platform",
   description: "Configure an AI employee, not an LLM. Grounded, verified, trustworthy business AI operations.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/favicon.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/logo.png",
+  },
 };
 
 import { AuthProvider } from "@/lib/auth";

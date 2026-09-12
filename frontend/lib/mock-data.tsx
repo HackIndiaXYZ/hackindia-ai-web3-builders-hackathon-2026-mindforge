@@ -19,8 +19,9 @@ export interface AgentAction {
   description: string;
   enabled: boolean;
   requiresConfirmation: boolean;
-  category: "finance" | "support" | "system";
+  category: "finance" | "support" | "system" | "social" | "database" | "security";
   needsReview?: boolean;
+  tier?: "starter" | "growth" | "enterprise";
 }
 
 export interface BusinessBrainData {
@@ -174,6 +175,7 @@ const initialActions: AgentAction[] = [
     enabled: true,
     requiresConfirmation: true,
     category: "finance",
+    tier: "growth",
   },
   {
     id: "act-order",
@@ -182,6 +184,7 @@ const initialActions: AgentAction[] = [
     enabled: true,
     requiresConfirmation: false,
     category: "support",
+    tier: "starter",
   },
   {
     id: "act-ticket",
@@ -190,6 +193,7 @@ const initialActions: AgentAction[] = [
     enabled: true,
     requiresConfirmation: false,
     category: "support",
+    tier: "growth",
   },
   {
     id: "act-escalate",
@@ -198,7 +202,44 @@ const initialActions: AgentAction[] = [
     enabled: true,
     requiresConfirmation: false,
     category: "support",
+    tier: "starter",
     needsReview: true,
+  },
+  {
+    id: "act-instagram",
+    name: "Instagram Page Automation",
+    description: "Automatically reply to Instagram post comments, direct messages (DMs), and story product mentions.",
+    enabled: false,
+    requiresConfirmation: false,
+    category: "social",
+    tier: "enterprise",
+  },
+  {
+    id: "act-facebook",
+    name: "Facebook Page Automation",
+    description: "24/7 automated Facebook Messenger replies, page inbox synchronization, and ad lead capture.",
+    enabled: false,
+    requiresConfirmation: false,
+    category: "social",
+    tier: "enterprise",
+  },
+  {
+    id: "act-db-connector",
+    name: "Live Enterprise Database Connector",
+    description: "Real-time SQL and Supabase query connector for instant inventory lookups and custom record updates.",
+    enabled: false,
+    requiresConfirmation: true,
+    category: "database",
+    tier: "enterprise",
+  },
+  {
+    id: "act-e2e-vault",
+    name: "Full Private End-to-End Encrypted Vault",
+    description: "Client-side encrypted memory and isolated zero-retention tenant execution for sensitive operations.",
+    enabled: true,
+    requiresConfirmation: false,
+    category: "security",
+    tier: "enterprise",
   },
 ];
 

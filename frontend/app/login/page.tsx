@@ -138,6 +138,7 @@ function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [unverifiedNotice, setUnverifiedNotice] = useState<string | null>(null);
+  const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
 
   // Switch between tabs
   const switchMode = (newMode: AuthMode) => {
@@ -168,9 +169,18 @@ function AuthForm() {
       router.push(redirectUrl);
     } catch (err: any) {
       const msg = err.message || "Failed to sign in";
-      if (msg.toLowerCase().includes("not verified") || msg.toLowerCase().includes("activation code")) {
+      if (
+        msg.toLowerCase().includes("not verified") ||
+        msg.toLowerCase().includes("activation code") ||
+        msg.toLowerCase().includes("verification code")
+      ) {
         setUnverifiedNotice(msg);
-        toast("Account unverified. 6-digit OTP sent to your email!", "info");
+        const match = msg.match(/\b\d{6}\b/);
+        if (match) {
+          setDevOtpHint(match[0]);
+          setOtpCode(match[0]);
+        }
+        toast("Account unverified. 6-digit OTP code provided!", "info");
         setMode("verify_otp");
       } else {
         toast(msg, "error");
@@ -214,6 +224,10 @@ function AuthForm() {
     try {
       const res = await register(fullName, email, password, confirmPassword);
       toast(res.message || "Verification code sent to your email!", "success");
+      if (res.dev_otp) {
+        setDevOtpHint(res.dev_otp);
+        setOtpCode(res.dev_otp);
+      }
       setMode("verify_otp");
     } catch (err: any) {
       toast(err.message || "Registration failed. Please try again.", "error");
@@ -253,8 +267,12 @@ function AuthForm() {
     }
     setIsResending(true);
     try {
-      await register(fullName || "User", email, password || "StrongPass!123", password || "StrongPass!123");
+      const res = await register(fullName || "User", email, password || "StrongPass!123", password || "StrongPass!123");
       toast("A new 6-digit verification code has been sent to your email!", "success");
+      if (res.dev_otp) {
+        setDevOtpHint(res.dev_otp);
+        setOtpCode(res.dev_otp);
+      }
     } catch (err: any) {
       toast(err.message || "Could not resend code. Please try again.", "error");
     } finally {
@@ -276,6 +294,11 @@ function AuthForm() {
     try {
       const msg = await forgotPassword(email);
       toast(msg || "Password reset code sent to your email!", "success");
+      const match = (msg || "").match(/\b\d{6}\b/);
+      if (match) {
+        setDevOtpHint(match[0]);
+        setOtpCode(match[0]);
+      }
       setMode("reset_password");
     } catch (err: any) {
       toast(err.message || "Failed to request password reset code", "error");
@@ -527,6 +550,21 @@ function AuthForm() {
                     {email}
                   </p>
                 </div>
+
+                {devOtpHint && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-md text-center space-y-1">
+                    <p className="text-xs text-emerald-400 font-medium">
+                      Verification Code: <span className="font-mono font-bold tracking-widest text-primary-text bg-secondary-surface px-2 py-0.5 rounded border border-border">{devOtpHint}</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setOtpCode(devOtpHint)}
+                      className="text-[11px] text-emerald-400 hover:underline"
+                    >
+                      (Click to auto-fill code)
+                    </button>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-medium text-secondary-text mb-1.5 text-center">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 export const ONBOARDING_STEPS = [
   { id: "business", number: "01", label: "Business", href: "/onboarding/business" },
@@ -25,8 +26,8 @@ export function OnboardingProgressBar() {
   return (
     <div className="w-full bg-surface border-b border-border py-4 px-6 sticky top-0 z-30">
       <div className="max-w-5xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold tracking-tight text-sm text-primary-text">AgentForge</span>
+        <div className="flex items-center gap-2.5">
+          <Logo size={22} showText={true} />
           <span className="text-muted-text text-xs">/</span>
           <span className="text-xs text-secondary-text">Configure Employee</span>
         </div>

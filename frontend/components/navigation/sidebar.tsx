@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/ui/logo";
 import {
   LayoutDashboard,
   Brain,
@@ -81,21 +82,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
       <div>
         {/* Brand header */}
         <div className="h-14 px-4 flex items-center justify-between border-b border-border">
-          <Link href="/" className="flex items-center gap-2 overflow-hidden">
-            <div className="w-6 h-6 rounded bg-primary-text text-background flex items-center justify-center font-bold text-xs flex-shrink-0">
-              AF
-            </div>
-            {!collapsed && (
-              <div className="flex flex-col">
-                <span className="font-semibold text-sm tracking-tight text-primary-text leading-tight">
-                  AgentForge
-                </span>
-                <span className="text-[10px] text-muted-text uppercase tracking-wider font-mono">
-                  Enterprise
-                </span>
-              </div>
-            )}
-          </Link>
+          <Logo size={26} showText={!collapsed} subtitle="Enterprise" />
 
           <button
             onClick={onToggleCollapse}

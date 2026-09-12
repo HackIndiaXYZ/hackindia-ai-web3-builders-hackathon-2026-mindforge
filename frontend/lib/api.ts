@@ -239,6 +239,7 @@ export interface RegisterResponse {
   message: string;
   email: string;
   requires_otp: boolean;
+  dev_otp?: string;
 }
 
 export interface AuthTokenResponse {
@@ -250,6 +251,7 @@ export interface AuthTokenResponse {
 export interface ForgotPasswordResponse {
   message: string;
   email: string;
+  dev_otp?: string;
 }
 
 // Fallback provider ensuring 100% interactive operation in any environment

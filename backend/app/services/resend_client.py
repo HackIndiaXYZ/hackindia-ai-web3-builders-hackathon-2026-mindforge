@@ -41,6 +41,13 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
         return False
 
 async def send_activation_otp_email(to_email: str, otp_code: str, name: Optional[str] = None) -> bool:
+    print(f"\n==================================================", flush=True)
+    print(f"🔐 [AGENTFORGE DEV OTP DISPATCH]", flush=True)
+    print(f"   Recipient: {to_email}", flush=True)
+    print(f"   OTP Code:  {otp_code}", flush=True)
+    print(f"   Purpose:   Account Activation", flush=True)
+    print(f"==================================================\n", flush=True)
+
     display_name = name or "Founder"
     subject = f"{otp_code} is your AgentForge verification code"
     
@@ -83,6 +90,13 @@ async def send_activation_otp_email(to_email: str, otp_code: str, name: Optional
     return await send_email(to_email, subject, html)
 
 async def send_password_reset_otp_email(to_email: str, otp_code: str, name: Optional[str] = None) -> bool:
+    print(f"\n==================================================", flush=True)
+    print(f"🔐 [AGENTFORGE DEV OTP DISPATCH]", flush=True)
+    print(f"   Recipient: {to_email}", flush=True)
+    print(f"   OTP Code:  {otp_code}", flush=True)
+    print(f"   Purpose:   Password Reset", flush=True)
+    print(f"==================================================\n", flush=True)
+
     display_name = name or "there"
     subject = f"{otp_code} is your AgentForge password reset code"
     

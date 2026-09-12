@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/navigation/sidebar";
 import { TopHeader } from "@/components/navigation/top-header";
 import { CommandMenu } from "@/components/navigation/command-menu";
 import { AddSourceModal } from "@/components/knowledge/add-source-modal";
+import { Logo } from "@/components/ui/logo";
 import {
   LayoutDashboard,
   Brain,
@@ -87,7 +88,7 @@ export default function DashboardLayout({
           <div className="relative w-64 bg-surface h-full z-10 p-4 flex flex-col justify-between border-r border-border">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
-                <span className="font-semibold text-sm">AgentForge</span>
+                <Logo size={24} />
                 <button
                   onClick={() => setMobileMenuOpen(false)}
                   className="p-1 text-secondary-text"
@@ -176,7 +177,7 @@ export default function DashboardLayout({
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="font-semibold text-xs tracking-tight">AgentForge</span>
+            <Logo size={22} />
           </div>
           <button
             onClick={() => setCommandMenuOpen(true)}

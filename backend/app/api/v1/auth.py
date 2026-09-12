@@ -89,12 +89,15 @@ async def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     db.commit()
 
     # 6. Dispatch email via Resend
-    await send_activation_otp_email(clean_email, otp_code, user_name)
+    email_sent = await send_activation_otp_email(clean_email, otp_code, user_name)
+
+    msg = f"Verification code sent to {clean_email}." if email_sent else f"Verification code: {otp_code} (Resend Sandbox)."
 
     return RegisterResponse(
-        message=f"Verification code sent to {clean_email}. Please enter the 6-digit code to activate your account.",
+        message=f"{msg} Please enter the 6-digit code to activate your account.",
         email=clean_email,
-        requires_otp=True
+        requires_otp=True,
+        dev_otp=otp_code
     )
 
 @router.post("/verify-signup-otp", response_model=AuthTokenResponse)
@@ -164,11 +167,12 @@ async def login(payload: UserLoginRequest, db: Session = Depends(get_db)):
         )
         db.add(otp_record)
         db.commit()
-        await send_activation_otp_email(clean_email, otp_code, user.full_name)
+        email_sent = await send_activation_otp_email(clean_email, otp_code, user.full_name)
+        msg = f"Your account is not verified yet. Verification code: {otp_code}." if not email_sent else "Your account is not verified yet. A 6-digit code has been sent to your email."
 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Your account is not verified yet. A new 6-digit activation code has been sent to your email."
+            detail=msg
         )
 
     token = create_access_token(user_id=user.id, email=user.email)
@@ -183,6 +187,7 @@ async def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(
     clean_email = payload.email.strip().lower()
     user = db.query(User).filter(User.email == clean_email).first()
 
+    dev_code = None
     if user:
         # Invalidate older reset OTPs
         db.query(OTPVerification).filter(
@@ -194,6 +199,7 @@ async def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(
 
         # Generate new reset OTP
         otp_code = generate_otp_code()
+        dev_code = otp_code
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
         otp_record = OTPVerification(
             email=clean_email,
@@ -205,11 +211,12 @@ async def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(
         db.add(otp_record)
         db.commit()
 
-        await send_password_reset_otp_email(clean_email, otp_code, user.full_name)
+        email_sent = await send_password_reset_otp_email(clean_email, otp_code, user.full_name)
 
     return {
-        "message": f"If an account exists for {clean_email}, a 6-digit password reset code has been sent to your email.",
-        "email": clean_email
+        "message": f"If an account exists for {clean_email}, a 6-digit password reset code has been sent.",
+        "email": clean_email,
+        "dev_otp": dev_code
     }
 
 @router.post("/reset-password", response_model=AuthTokenResponse)

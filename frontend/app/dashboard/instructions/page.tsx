@@ -61,6 +61,19 @@ export default function InstructionsPage() {
         </Button>
       </div>
 
+      {/* Starter Plan Inclusions Banner */}
+      <div className="p-3.5 rounded-lg border border-border bg-secondary-surface/40 flex items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 text-secondary-text">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+          <span>
+            <strong className="text-primary-text font-medium">Included in Starter Plan:</strong> Instruct your AI on what to say to customers, brand tone traits, refund guidelines, and negative safety constraints.
+          </span>
+        </div>
+        <Badge variant="neutral" size="sm" className="hidden sm:inline-flex">
+          Starter • $0
+        </Badge>
+      </div>
+
       {/* Main Instructions Cards matching PRD Section 22 */}
       <div className="space-y-6">
         {/* Role */}
