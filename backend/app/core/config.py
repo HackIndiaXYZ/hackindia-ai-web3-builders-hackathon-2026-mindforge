@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
     EMBEDDING_DIM: int = 384
     VAPI_PUBLIC_KEY: Optional[str] = None
+    RESEND_API_KEY: Optional[str] = None
+    RESEND_FROM_EMAIL: str = "AgentForge <onboarding@resend.dev>"
     JWT_SECRET: str = "agentforge_super_secure_jwt_secret_key_2026_dev"
     CORS_ORIGINS: str = "*"
 

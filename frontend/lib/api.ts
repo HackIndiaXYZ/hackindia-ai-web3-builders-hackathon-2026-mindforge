@@ -235,6 +235,23 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
   return getMockResponse<T>(endpoint, options);
 }
 
+export interface RegisterResponse {
+  message: string;
+  email: string;
+  requires_otp: boolean;
+}
+
+export interface AuthTokenResponse {
+  access_token: string;
+  token_type: string;
+  user: UserProfile;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+  email: string;
+}
+
 // Fallback provider ensuring 100% interactive operation in any environment
 function getMockResponse<T>(endpoint: string, options: RequestInit = {}): T {
   const method = options.method || "GET";
@@ -242,10 +259,43 @@ function getMockResponse<T>(endpoint: string, options: RequestInit = {}): T {
 
   // Auth: Register
   if (endpoint === "/auth/register" && method === "POST") {
+    return {
+      message: `Verification code sent to ${body.email || "your email"}. Please enter the 6-digit code to activate your account.`,
+      email: body.email || "demo@agentforge.ai",
+      requires_otp: true,
+    } as unknown as T;
+  }
+
+  // Auth: Verify Signup OTP
+  if (endpoint === "/auth/verify-signup-otp" && method === "POST") {
     const user: UserProfile = {
       id: "usr-" + Date.now(),
       email: body.email || "demo@agentforge.ai",
-      full_name: body.full_name || "Demo User",
+      full_name: "Demo User",
+      created_at: new Date().toISOString(),
+      workspaces: [],
+    };
+    return {
+      access_token: "mock-jwt-" + Date.now(),
+      token_type: "bearer",
+      user,
+    } as unknown as T;
+  }
+
+  // Auth: Forgot Password
+  if (endpoint === "/auth/forgot-password" && method === "POST") {
+    return {
+      message: `If an account exists for ${body.email}, a 6-digit password reset code has been sent to your email.`,
+      email: body.email || "demo@agentforge.ai",
+    } as unknown as T;
+  }
+
+  // Auth: Reset Password
+  if (endpoint === "/auth/reset-password" && method === "POST") {
+    const user: UserProfile = {
+      id: "usr-" + Date.now(),
+      email: body.email || "demo@agentforge.ai",
+      full_name: "Demo User",
       created_at: new Date().toISOString(),
       workspaces: [],
     };

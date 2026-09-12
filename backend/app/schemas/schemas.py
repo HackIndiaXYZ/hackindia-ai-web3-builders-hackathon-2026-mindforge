@@ -6,8 +6,27 @@ from uuid import UUID
 # Auth schemas
 class UserRegisterRequest(BaseModel):
     email: str = Field(..., description="User email address")
-    password: str = Field(..., min_length=6, description="User password (min 6 chars)")
+    password: str = Field(..., description="User password")
+    confirm_password: Optional[str] = Field(None, description="Confirm password")
     full_name: Optional[str] = Field(None, description="User's full name")
+
+class RegisterResponse(BaseModel):
+    message: str
+    email: str
+    requires_otp: bool = True
+
+class VerifySignupOtpRequest(BaseModel):
+    email: str = Field(..., description="User email address")
+    otp: str = Field(..., min_length=6, max_length=6, description="6-digit verification code")
+
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., description="User email address")
+
+class ResetPasswordRequest(BaseModel):
+    email: str = Field(..., description="User email address")
+    otp: str = Field(..., min_length=6, max_length=6, description="6-digit reset code")
+    new_password: str = Field(..., description="New strong password")
+    confirm_password: str = Field(..., description="Confirm new password")
 
 class UserLoginRequest(BaseModel):
     email: str = Field(..., description="User email address")
@@ -17,6 +36,7 @@ class UserResponse(BaseModel):
     id: UUID
     email: str
     full_name: Optional[str] = None
+    is_verified: bool = True
     created_at: datetime
 
     class Config:

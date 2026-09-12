@@ -8,6 +8,9 @@ import {
   clearAuthToken,
   apiRequest,
   UserProfile,
+  RegisterResponse,
+  AuthTokenResponse,
+  ForgotPasswordResponse,
 } from "./api";
 
 interface AuthContextType {
@@ -16,7 +19,10 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, confirmPassword?: string) => Promise<RegisterResponse>;
+  verifySignupOtp: (email: string, otp: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<string>;
+  resetPassword: (email: string, otp: string, newPassword: string, confirmPassword: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -53,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const res = await apiRequest<{ access_token: string; user: UserProfile }>("/auth/login", {
+    const res = await apiRequest<AuthTokenResponse>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
@@ -63,10 +69,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(res.user);
   };
 
-  const register = async (name: string, email: string, password: string) => {
-    const res = await apiRequest<{ access_token: string; user: UserProfile }>("/auth/register", {
+  const register = async (name: string, email: string, password: string, confirmPassword?: string): Promise<RegisterResponse> => {
+    const res = await apiRequest<RegisterResponse>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ full_name: name, email, password }),
+      body: JSON.stringify({
+        full_name: name,
+        email,
+        password,
+        confirm_password: confirmPassword || password,
+      }),
+    });
+
+    return res;
+  };
+
+  const verifySignupOtp = async (email: string, otp: string) => {
+    const res = await apiRequest<AuthTokenResponse>("/auth/verify-signup-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, otp }),
+    });
+
+    setAuthToken(res.access_token);
+    setTokenState(res.access_token);
+    setUser(res.user);
+  };
+
+  const forgotPassword = async (email: string): Promise<string> => {
+    const res = await apiRequest<ForgotPasswordResponse>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+    return res.message;
+  };
+
+  const resetPassword = async (email: string, otp: string, newPassword: string, confirmPassword: string) => {
+    const res = await apiRequest<AuthTokenResponse>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({
+        email,
+        otp,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      }),
     });
 
     setAuthToken(res.access_token);
@@ -90,6 +134,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         register,
+        verifySignupOtp,
+        forgotPassword,
+        resetPassword,
         logout,
       }}
     >
