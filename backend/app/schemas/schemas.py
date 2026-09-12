@@ -127,6 +127,16 @@ class BusinessProfileUpdate(BaseModel):
     escalation: Optional[Dict[str, Any]] = None
 
 # Onboarding Interview schemas
+class VerifyUrlRequest(BaseModel):
+    website_url: str = Field(..., description="Website URL to verify")
+
+class VerifyUrlResponse(BaseModel):
+    is_real: bool
+    status_code: int = 0
+    url: str
+    title: Optional[str] = ""
+    error: Optional[str] = ""
+
 class OnboardingInitRequest(BaseModel):
     website_url: str = Field(..., description="Business website URL to crawl")
     business_name: Optional[str] = Field(None, description="Optional name override")

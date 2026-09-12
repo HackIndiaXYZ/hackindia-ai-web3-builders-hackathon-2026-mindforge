@@ -385,6 +385,26 @@ function getMockResponse<T>(endpoint: string, options: RequestInit = {}): T {
     } as unknown as T;
   }
 
+  // Onboarding: Verify URL
+  if (endpoint === "/onboarding/verify-url" && method === "POST") {
+    const rawUrl = (body.website_url || "").trim().toLowerCase();
+    const isFake = rawUrl.includes("fake") || rawUrl.includes("notareal") || rawUrl.includes("thisdoesnotexist") || !rawUrl.includes(".");
+    if (isFake) {
+      return {
+        is_real: false,
+        status_code: 0,
+        url: body.website_url || "",
+        error: "Website is unreachable or does not exist.",
+      } as unknown as T;
+    }
+    return {
+      is_real: true,
+      status_code: 200,
+      url: body.website_url || "https://example.com",
+      title: (body.website_url || "").replace(/^https?:\/\//, "").replace(/\/$/, ""),
+    } as unknown as T;
+  }
+
   // Onboarding: Init
   if (endpoint === "/onboarding/init" && method === "POST") {
     const slug = (body.business_name || "custom-ai-employee")

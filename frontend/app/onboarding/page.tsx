@@ -82,10 +82,47 @@ export default function OnboardingPage() {
   const [dedicatedUrl, setDedicatedUrl] = useState("");
   const [adminUrl, setAdminUrl] = useState("");
 
+  // Website URL Verification State
+  const [urlChecking, setUrlChecking] = useState(false);
+  const [urlStatus, setUrlStatus] = useState<{ is_real: boolean; message: string } | null>(null);
+
+  const verifyUrl = async (urlToTest: string) => {
+    const clean = urlToTest.trim();
+    if (!clean || !clean.includes(".")) {
+      setUrlStatus(null);
+      return;
+    }
+    setUrlChecking(true);
+    try {
+      const res = await apiRequest<any>("/onboarding/verify-url", {
+        method: "POST",
+        body: JSON.stringify({ website_url: clean }),
+      });
+      if (res && res.is_real) {
+        setUrlStatus({ is_real: true, message: res.title ? `Verified live: "${res.title}"` : "Verified live website." });
+        if (!businessName && res.title) {
+          const autoName = res.title.split("|")[0].split("-")[0].trim();
+          if (autoName && autoName.length < 35) setBusinessName(autoName);
+        }
+      } else {
+        setUrlStatus({ is_real: false, message: res?.error || "Website is unreachable or does not exist." });
+      }
+    } catch (err: any) {
+      setUrlStatus({ is_real: false, message: err?.message || "Cannot connect to website." });
+    } finally {
+      setUrlChecking(false);
+    }
+  };
+
   // Handler: Start Crawling & Init Onboarding
   const handleStartTraining = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!websiteUrl) return;
+
+    if (urlStatus && !urlStatus.is_real) {
+      toast("The website is unreachable or does not exist. Please enter a valid URL.", "error");
+      return;
+    }
 
     setPhase(2);
     setCrawlProgress(15);
@@ -139,8 +176,8 @@ export default function OnboardingPage() {
         setPhase(3);
       }, 3400);
     } catch (err: any) {
-      toast(err?.message || "Error initiating website crawl. Continuing with baseline knowledge.", "error");
-      setPhase(3);
+      toast(err?.message || "Website is unreachable or does not exist. Please check the URL.", "error");
+      setPhase(1);
     }
   };
 
@@ -289,15 +326,66 @@ export default function OnboardingPage() {
 
             <Card className="p-6">
               <form onSubmit={handleStartTraining} className="space-y-5">
-                <Input
-                  label="Website URL"
-                  type="url"
-                  placeholder="https://yourcompany.com"
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  required
-                  hint="We will crawl public pages and generate vector embeddings."
-                />
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-medium text-secondary-text">
+                      Website URL <span className="text-red-500">*</span>
+                    </label>
+                    {urlChecking && (
+                      <span className="text-[11px] font-mono text-muted-text flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3 animate-spin text-accent" />
+                        Verifying reachability...
+                      </span>
+                    )}
+                    {urlStatus && !urlChecking && (
+                      <span
+                        className={`text-[11px] font-mono flex items-center gap-1 ${
+                          urlStatus.is_real
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-red-500"
+                        }`}
+                      >
+                        {urlStatus.is_real ? (
+                          <>
+                            <Check className="w-3 h-3" /> {urlStatus.message}
+                          </>
+                        ) : (
+                          <>
+                            <ShieldAlert className="w-3 h-3" /> {urlStatus.message}
+                          </>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        type="url"
+                        placeholder="https://yourcompany.com"
+                        value={websiteUrl}
+                        onChange={(e) => {
+                          setWebsiteUrl(e.target.value);
+                          if (urlStatus) setUrlStatus(null);
+                        }}
+                        onBlur={() => {
+                          if (websiteUrl.trim()) verifyUrl(websiteUrl);
+                        }}
+                        required
+                        hint="We will crawl public pages and generate 384d vector embeddings in pgvector."
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-10 text-xs px-3 self-start"
+                      onClick={() => verifyUrl(websiteUrl)}
+                      disabled={!websiteUrl || urlChecking}
+                    >
+                      {urlChecking ? "Checking..." : "Verify Site"}
+                    </Button>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
@@ -308,13 +396,28 @@ export default function OnboardingPage() {
                     required
                   />
 
-                  <Input
-                    label="Category / Industry"
-                    placeholder="e.g. Healthcare, Retail, Technology..."
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    required
-                  />
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-medium text-secondary-text">
+                      Category / Industry <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      required
+                      className="w-full h-10 px-3 rounded-md bg-secondary-surface border border-border text-sm text-primary-text focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+                    >
+                      <option value="" disabled>Select business category...</option>
+                      <option value="Artisan Bakery & Cafe">Artisan Bakery & Cafe</option>
+                      <option value="Healthcare & Dental">Healthcare & Dental</option>
+                      <option value="Legal & Advisory">Legal & Advisory</option>
+                      <option value="Productivity & SaaS">Productivity & SaaS</option>
+                      <option value="Real Estate & Housing">Real Estate & Housing</option>
+                      <option value="Finance & Tax">Finance & Tax</option>
+                      <option value="E-Commerce & Retail">E-Commerce & Retail</option>
+                      <option value="Commercial & Professional Services">Commercial & Professional Services</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
                 </div>
 
                 <Input

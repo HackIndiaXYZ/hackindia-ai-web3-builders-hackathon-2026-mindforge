@@ -17,14 +17,21 @@ from app.models.models import (
 from app.schemas.schemas import (
     OnboardingInitRequest, OnboardingInitResponse,
     OnboardingStartRequest, OnboardingMessageRequest,
-    OnboardingResponse, OnboardingDeployResponse
+    OnboardingResponse, OnboardingDeployResponse,
+    VerifyUrlRequest, VerifyUrlResponse
 )
-from app.services.crawler import crawl_website
+from app.services.crawler import crawl_website, verify_website_url
 from app.services.chunker import chunk_text
 from app.services.embedder import compute_embeddings
 from app.services.gemini_client import call_gemini
 
 router = APIRouter(tags=["AI Onboarding"])
+
+@router.post("/onboarding/verify-url", response_model=VerifyUrlResponse)
+async def verify_url_endpoint(payload: VerifyUrlRequest):
+    """Verifies whether a provided website URL is live, reachable, and has a real domain."""
+    result = await verify_website_url(payload.website_url)
+    return result
 
 EXTRACTOR_SYSTEM_PROMPT = """You are an expert AI business onboarding analyst.
 Your task is to analyze the provided raw website text and notes from a business owner, and extract a structured Business Profile in JSON format.
@@ -68,6 +75,14 @@ async def init_onboarding_from_url(
     target_url = payload.website_url.strip()
     if not target_url.startswith("http://") and not target_url.startswith("https://"):
         target_url = "https://" + target_url
+
+    # Verify that the website is real and accessible
+    url_check = await verify_website_url(target_url)
+    if not url_check.get("is_real"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"The website '{target_url}' is unreachable or does not exist. {url_check.get('error', 'Please enter a live, public website.')}"
+        )
 
     # Deduce initial business name if not supplied
     inferred_name = payload.business_name

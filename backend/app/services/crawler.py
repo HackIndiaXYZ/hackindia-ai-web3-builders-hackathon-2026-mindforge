@@ -64,6 +64,62 @@ async def fetch_page(url: str, timeout: float = 15.0) -> Dict[str, Any]:
             "error": str(e)
         }
 
+async def verify_website_url(url: str, timeout: float = 7.0) -> Dict[str, Any]:
+    """
+    Verifies whether a given URL is a real, accessible, live website.
+    Checks syntax, DNS resolution, and HTTP connectivity.
+    """
+    clean_url = url.strip()
+    if not clean_url.startswith("http://") and not clean_url.startswith("https://"):
+        clean_url = "https://" + clean_url
+    
+    parsed = urlparse(clean_url)
+    if not parsed.netloc or "." not in parsed.netloc:
+        return {
+            "is_real": False,
+            "status_code": 0,
+            "error": "Invalid website URL or missing domain name.",
+            "url": clean_url
+        }
+
+    try:
+        async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True, timeout=timeout) as client:
+            resp = await client.get(clean_url)
+            is_real = resp.status_code < 400 or resp.status_code in [401, 403]
+            title = ""
+            if resp.status_code < 400 and resp.text:
+                soup = BeautifulSoup(resp.text[:5000], "html.parser")
+                title = soup.title.string.strip() if soup.title and soup.title.string else ""
+            
+            return {
+                "is_real": is_real,
+                "status_code": resp.status_code,
+                "url": str(resp.url),
+                "title": title or parsed.netloc,
+                "error": "" if is_real else f"Website returned error status {resp.status_code}"
+            }
+    except httpx.ConnectError:
+        return {
+            "is_real": False,
+            "status_code": 0,
+            "error": f"Cannot connect to '{parsed.netloc}'. The domain does not exist or server is offline.",
+            "url": clean_url
+        }
+    except httpx.TimeoutException:
+        return {
+            "is_real": False,
+            "status_code": 0,
+            "error": f"Connection to '{parsed.netloc}' timed out. Website is unresponsive.",
+            "url": clean_url
+        }
+    except Exception as e:
+        return {
+            "is_real": False,
+            "status_code": 0,
+            "error": str(e),
+            "url": clean_url
+        }
+
 async def crawl_website(base_url: str, max_pages: int = 5) -> List[Dict[str, Any]]:
     """Crawl the homepage and up to max_pages internal pages on the same host."""
     parsed_base = urlparse(base_url)
