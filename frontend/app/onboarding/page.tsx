@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Navbar } from "@/components/navigation/navbar";
+import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +29,7 @@ import {
   ExternalLink,
   Bot,
   Send,
+  X,
 } from "lucide-react";
 
 export default function OnboardingPage() {
@@ -46,24 +47,23 @@ export default function OnboardingPage() {
   // Workflow Phases: 1 (URL input) -> 2 (Crawling) -> 3 (3-Turn Interview) -> 4 (Brain Review) -> 5 (Deployed Success)
   const [phase, setPhase] = useState<1 | 2 | 3 | 4 | 5>(1);
 
-  // Phase 1 inputs
-  const [websiteUrl, setWebsiteUrl] = useState("https://sweetcrustbakery.example.com");
-  const [businessName, setBusinessName] = useState("Sweet Crust Bakery");
-  const [category, setCategory] = useState("Artisan Bakery & Cafe");
-  const [businessNotes, setBusinessNotes] = useState(
-    "We bake fresh naturally fermented sourdoughs daily at 5 AM. Custom wedding consultations required."
-  );
+  // Phase 1 inputs (no pre-typed hardcoded data)
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [category, setCategory] = useState("");
+  const [businessNotes, setBusinessNotes] = useState("");
+  const [customSlug, setCustomSlug] = useState("");
 
   // Phase 2 & 3 state
-  const [workspaceId, setWorkspaceId] = useState<string>("ws-" + Date.now());
-  const [slug, setSlug] = useState<string>("sweet-crust-bakery");
+  const [workspaceId, setWorkspaceId] = useState<string>("");
+  const [slug, setSlug] = useState<string>("");
   const [crawlProgress, setCrawlProgress] = useState(0);
   const [crawlStatusText, setCrawlStatusText] = useState("Crawling website pages...");
 
   // Interview state (3 turns)
   const [interviewTurn, setInterviewTurn] = useState(1);
   const [assistantMessage, setAssistantMessage] = useState(
-    "I've analyzed your website and initiated your business profile draft! What are your standard operating hours and primary service location?"
+    "Welcome! Enter your business details below to train your AI Employee."
   );
   const [userAnswer, setUserAnswer] = useState("");
   const [interviewHistory, setInterviewHistory] = useState<Array<{ role: string; content: string }>>([]);
@@ -71,10 +71,10 @@ export default function OnboardingPage() {
 
   // Phase 4 Business Brain Review state
   const [profileData, setProfileData] = useState({
-    hours: "Tuesday to Sunday: 7:00 AM – 6:00 PM (Closed Mondays)",
-    services: "Handcrafted Sourdough, Morning Pastries, Custom Wedding Cakes, Catering",
-    policies: "Full refund on catering with 48 hours notice. Custom cake deposits non-refundable within 7 days.",
-    contact: "hello@sweetcrustbakery.com • Tier-2 Escalation: Sarah Jenkins",
+    hours: "",
+    services: "",
+    policies: "",
+    contact: "",
   });
 
   // Phase 5 Deployment state
@@ -99,6 +99,7 @@ export default function OnboardingPage() {
           business_name: businessName,
           category,
           business_notes: businessNotes,
+          custom_slug: customSlug.trim() ? customSlug.trim() : undefined,
         }),
       });
 
@@ -120,13 +121,29 @@ export default function OnboardingPage() {
         if (res.workspace_id) setWorkspaceId(res.workspace_id);
         if (res.slug) setSlug(res.slug);
         if (res.assistant_message) setAssistantMessage(res.assistant_message);
+
+        // Populate Brain review from detected profile if available
+        if (res.detected_profile) {
+          const det = res.detected_profile;
+          const hoursStr = typeof det.hours === "object" ? (det.hours?.schedule || JSON.stringify(det.hours)) : (det.hours || "");
+          const servicesStr = Array.isArray(det.services) ? det.services.join(", ") : (det.services || "");
+          const policiesStr = typeof det.policies === "object" ? Object.entries(det.policies).map(([k, v]) => `${k}: ${v}`).join("; ") : (det.policies || "");
+          const contactStr = typeof det.contact === "object" ? Object.entries(det.contact).map(([k, v]) => `${k}: ${v}`).join(" • ") : (det.contact || "");
+          setProfileData({
+            hours: hoursStr || "Monday – Friday: 9:00 AM – 6:00 PM",
+            services: servicesStr || "Standard customer service and product consultation",
+            policies: policiesStr || "Standard satisfaction guarantee with 30-day inquiry window.",
+            contact: contactStr || "Support desk & verified email",
+          });
+        }
         setPhase(3);
       }, 3400);
-    } catch (err) {
-      toast("Error initiating website crawl. Continuing with baseline knowledge.", "error");
+    } catch (err: any) {
+      toast(err?.message || "Error initiating website crawl. Continuing with baseline knowledge.", "error");
       setPhase(3);
     }
   };
+
 
   // Handler: Send Interview Answer (3 Turns)
   const handleSendAnswer = async (answerText?: string) => {
@@ -216,7 +233,25 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-background text-primary-text flex flex-col selection:bg-neutral-800 selection:text-white">
-      <Navbar />
+      {/* Focused Onboarding Header (No marketing links) */}
+      <header className="h-16 border-b border-border px-6 sm:px-10 flex items-center justify-between bg-surface/80 backdrop-blur-md sticky top-0 z-30">
+        <div className="flex items-center gap-3">
+          <Logo size={24} showText={true} />
+          <span className="hidden sm:inline-block text-border">|</span>
+          <span className="hidden sm:inline-block text-xs font-mono text-muted-text">
+            AI Employee Studio
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard">
+            <Button size="sm" variant="ghost" className="text-xs text-muted-text hover:text-primary-text gap-1.5">
+              <span>Exit to Dashboard</span>
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          </Link>
+        </div>
+      </header>
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 sm:px-10 py-10 space-y-8">
         {/* Step Indicator Header */}
@@ -267,7 +302,7 @@ export default function OnboardingPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     label="Business Name"
-                    placeholder="Acme Inc."
+                    placeholder="e.g. Acme Corp"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     required
@@ -275,12 +310,24 @@ export default function OnboardingPage() {
 
                   <Input
                     label="Category / Industry"
-                    placeholder="E-commerce, Clinic, Bakery..."
+                    placeholder="e.g. Healthcare, Retail, Technology..."
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     required
                   />
                 </div>
+
+                <Input
+                  label="Unique URL Slug (Optional)"
+                  placeholder="e.g. acme-corp"
+                  value={customSlug}
+                  onChange={(e) => setCustomSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+                  hint={
+                    customSlug
+                      ? `Your agent will be hosted at /${customSlug}`
+                      : "Leave blank to auto-generate a clean, unique slug from your business name."
+                  }
+                />
 
                 <Textarea
                   label="Operational Notes & Custom Instructions (Optional)"

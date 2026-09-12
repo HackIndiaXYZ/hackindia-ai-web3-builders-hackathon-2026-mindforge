@@ -132,6 +132,7 @@ class OnboardingInitRequest(BaseModel):
     business_name: Optional[str] = Field(None, description="Optional name override")
     category: Optional[str] = Field(None, description="Optional business category")
     business_notes: Optional[str] = Field(None, description="Additional context or notes")
+    custom_slug: Optional[str] = Field(None, description="Custom unique URL slug for the business")
 
 class OnboardingInitResponse(BaseModel):
     workspace_id: UUID

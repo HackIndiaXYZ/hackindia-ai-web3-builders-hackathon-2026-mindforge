@@ -13,13 +13,10 @@ export default function OnboardingBusinessPage() {
   const router = useRouter();
   const { businessBrain, updateBrain } = useAgentForge();
 
-  const [companyName, setCompanyName] = useState(businessBrain.companyName || "Acme Technologies");
-  const [website, setWebsite] = useState(businessBrain.website || "https://acme.com");
-  const [industry, setIndustry] = useState(businessBrain.industry || "Software / SaaS");
-  const [description, setDescription] = useState(
-    businessBrain.description ||
-      "Enterprise cloud orchestration, automated reliability engineering, and secure API infrastructure for modern development teams."
-  );
+  const [companyName, setCompanyName] = useState(businessBrain.companyName || "");
+  const [website, setWebsite] = useState(businessBrain.website || "");
+  const [industry, setIndustry] = useState(businessBrain.industry || "");
+  const [description, setDescription] = useState(businessBrain.description || "");
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 

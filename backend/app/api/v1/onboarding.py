@@ -45,15 +45,12 @@ Return ONLY valid JSON matching this exact structure:
 }
 """
 
-def generate_unique_slug(base_name: str, db: Session) -> str:
+def sanitize_slug(base_name: str) -> str:
     cleaned = re.sub(r'[^a-zA-Z0-9]+', '-', base_name.lower()).strip('-')
-    if not cleaned:
-        cleaned = "agent"
-    candidate = cleaned
-    counter = 1
-    while db.query(Workspace).filter(Workspace.slug == candidate).first():
-        candidate = f"{cleaned}-{counter}"
-        counter += 1
+    return cleaned if cleaned else "business"
+
+def generate_unique_slug(base_name: str, db: Session) -> str:
+    candidate = sanitize_slug(base_name)
     return candidate
 
 @router.post("/onboarding/init", response_model=OnboardingInitResponse)
@@ -66,6 +63,7 @@ async def init_onboarding_from_url(
     Primary endpoint for the Onboarding Page:
     Accepts website URL, crawls pages, indexes into pgvector, extracts initial Business Brain,
     and returns the first dynamic interview question with the generated workspace & slug.
+    Enforces unique slug per business without generating duplicate -1, -2 workspaces.
     """
     target_url = payload.website_url.strip()
     if not target_url.startswith("http://") and not target_url.startswith("https://"):
@@ -80,42 +78,114 @@ async def init_onboarding_from_url(
             inferred_name = "My Business"
 
     inferred_category = payload.category or "Commercial & Professional Services"
-    slug = generate_unique_slug(inferred_name, db)
+    
+    # Determine candidate slug: prefer user-specified custom_slug, else use inferred name
+    raw_slug = payload.custom_slug.strip() if payload.custom_slug and payload.custom_slug.strip() else inferred_name
+    slug_candidate = sanitize_slug(raw_slug)
 
-    # 1. Create Workspace
-    ws = Workspace(
-        user_id=current_user.id if current_user else None,
-        name=inferred_name,
-        slug=slug,
-        category=inferred_category,
-        website_url=target_url,
-        is_public=True,
-        status="active"
-    )
-    db.add(ws)
+    # 1. Resolve or Create Workspace with strict unique slug enforcement
+    existing_ws = db.query(Workspace).filter(Workspace.slug == slug_candidate).first()
+
+    if current_user:
+        # Check if current user already owns this workspace (by slug or exact business name)
+        user_ws = db.query(Workspace).filter(
+            Workspace.user_id == current_user.id,
+            (Workspace.slug == slug_candidate) | (Workspace.name.ilike(inferred_name))
+        ).first()
+
+        if user_ws:
+            # Reuse existing workspace owned by this user
+            ws = user_ws
+            ws.name = inferred_name
+            ws.slug = slug_candidate
+            ws.category = inferred_category
+            ws.website_url = target_url
+            db.commit()
+            db.refresh(ws)
+        elif existing_ws:
+            # Slug taken by another user or organization
+            if existing_ws.user_id != current_user.id:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"The slug '{slug_candidate}' is already claimed by another business. Please choose a unique name or custom slug."
+                )
+            else:
+                ws = existing_ws
+                ws.name = inferred_name
+                ws.category = inferred_category
+                ws.website_url = target_url
+                db.commit()
+                db.refresh(ws)
+        else:
+            # Create new workspace for current user
+            ws = Workspace(
+                user_id=current_user.id,
+                name=inferred_name,
+                slug=slug_candidate,
+                category=inferred_category,
+                website_url=target_url,
+                is_public=True,
+                status="active"
+            )
+            db.add(ws)
+            db.commit()
+            db.refresh(ws)
+    else:
+        # Anonymous / unauthenticated session
+        if existing_ws:
+            if existing_ws.user_id is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"The slug '{slug_candidate}' is already claimed by a registered business. Please log in or choose a unique slug."
+                )
+            else:
+                ws = existing_ws
+                ws.name = inferred_name
+                ws.category = inferred_category
+                ws.website_url = target_url
+                db.commit()
+                db.refresh(ws)
+        else:
+            ws = Workspace(
+                user_id=None,
+                name=inferred_name,
+                slug=slug_candidate,
+                category=inferred_category,
+                website_url=target_url,
+                is_public=True,
+                status="active"
+            )
+            db.add(ws)
+            db.commit()
+            db.refresh(ws)
+
+    # 2. Get or Create Profile & Agent Config
+    profile = db.query(BusinessProfile).filter(BusinessProfile.workspace_id == ws.id).first()
+    if not profile:
+        profile = BusinessProfile(
+            workspace_id=ws.id,
+            summary=f"{ws.name} is a premier business dedicated to quality and service.",
+            tone="friendly, professional, concise"
+        )
+        db.add(profile)
+
+    agent_config = db.query(AgentConfig).filter(AgentConfig.workspace_id == ws.id).first()
+    if not agent_config:
+        agent_config = AgentConfig(
+            workspace_id=ws.id,
+            slug=ws.slug,
+            name=f"{ws.name} AI Employee",
+            system_policy=f"You are the autonomous AI employee representing {ws.name}. Answer grounded in factual knowledge.",
+            tools=["create_lead", "book_appointment", "human_handoff"],
+            status="draft"
+        )
+        db.add(agent_config)
+    else:
+        agent_config.slug = ws.slug
+        agent_config.name = f"{ws.name} AI Employee"
     db.commit()
-    db.refresh(ws)
 
-    # 2. Create default Profile & Agent Config
-    profile = BusinessProfile(
-        workspace_id=ws.id,
-        summary=f"{ws.name} is a premier business dedicated to quality and service.",
-        tone="friendly, professional, concise"
-    )
-    db.add(profile)
-
-    agent_config = AgentConfig(
-        workspace_id=ws.id,
-        slug=slug,
-        name=f"{ws.name} AI Employee",
-        system_policy=f"You are the autonomous AI employee representing {ws.name}. Answer grounded in factual knowledge.",
-        tools=["create_lead", "book_appointment", "human_handoff"],
-        status="draft"
-    )
-    db.add(agent_config)
-    db.commit()
-
-    # 3. Crawl Website & Build Vector Knowledge Base
+    # 3. Crawl Website & Build Vector Knowledge Base (deduplicating sources)
     aggregated_text = ""
     try:
         crawled_pages = await crawl_website(target_url, max_pages=4)
@@ -125,31 +195,38 @@ async def init_onboarding_from_url(
             page_title = page.get("title") or ws.name
             aggregated_text += f"\n\n--- PAGE: {page_title} ({page.get('url')}) ---\n" + page.get("content")
 
-            source = KnowledgeSource(
-                workspace_id=ws.id,
-                type="url",
-                url=page.get("url"),
-                title=page_title,
-                status="indexed"
-            )
-            db.add(source)
-            db.commit()
-            db.refresh(source)
+            # Check if source already exists to prevent duplicate entries
+            source = db.query(KnowledgeSource).filter(
+                KnowledgeSource.workspace_id == ws.id,
+                KnowledgeSource.url == page.get("url")
+            ).first()
 
-            chunks = chunk_text(page.get("content"))
-            if chunks:
-                texts = [c["content"] for c in chunks]
-                embeddings = compute_embeddings(texts)
-                for c, emb in zip(chunks, embeddings):
-                    chunk_obj = KnowledgeChunk(
-                        workspace_id=ws.id,
-                        source_id=source.id,
-                        content=c["content"],
-                        embedding=emb,
-                        metadata_={"url": page.get("url"), "title": page_title, "chunk_idx": c["index"]}
-                    )
-                    db.add(chunk_obj)
+            if not source:
+                source = KnowledgeSource(
+                    workspace_id=ws.id,
+                    type="url",
+                    url=page.get("url"),
+                    title=page_title,
+                    status="indexed"
+                )
+                db.add(source)
                 db.commit()
+                db.refresh(source)
+
+                chunks = chunk_text(page.get("content"))
+                if chunks:
+                    texts = [c["content"] for c in chunks]
+                    embeddings = compute_embeddings(texts)
+                    for c, emb in zip(chunks, embeddings):
+                        chunk_obj = KnowledgeChunk(
+                            workspace_id=ws.id,
+                            source_id=source.id,
+                            content=c["content"],
+                            embedding=emb,
+                            metadata_={"url": page.get("url"), "title": page_title, "chunk_idx": c["index"]}
+                        )
+                        db.add(chunk_obj)
+                    db.commit()
     except Exception as e:
         # Fallback gracefully if network/website is offline or blocks scraping
         aggregated_text = f"Website: {target_url}. Business: {ws.name}."

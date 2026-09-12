@@ -96,76 +96,26 @@ export interface AgentForgeState {
 }
 
 const initialBrain: BusinessBrainData = {
-  companyName: "Acme Technologies",
-  industry: "Software / SaaS",
-  website: "https://acme.com",
-  description:
-    "Enterprise cloud orchestration, automated reliability engineering, and secure API infrastructure for modern development teams.",
-  services: [
-    "Website Development",
-    "Cloud Infrastructure Consulting",
-    "24/7 Managed Tier Support",
-    "Automated Performance Auditing",
-  ],
+  companyName: "",
+  industry: "",
+  website: "",
+  description: "",
+  services: [],
   policies: {
-    refundPolicy:
-      "Full refund within 30 days for unused billing cycles. Prorated refunds for annual contracts subject to account review.",
-    shippingPolicy:
-      "Instant digital provisioning of cloud workspaces, license keys, and management console credentials upon checkout.",
-    supportHours:
-      "Standard support: Monday–Friday 9:00 AM – 6:00 PM EST. Critical P1 emergency response available 24/7/365.",
+    refundPolicy: "",
+    shippingPolicy: "",
+    supportHours: "",
   },
   tone: {
     traits: ["Professional", "Helpful", "Concise"],
     summary:
       "Direct, knowledgeable, and calm. Prioritizes concrete answers over pleasantries without sounding mechanical.",
   },
-  aiGenerated: true,
-  lastUpdated: "Just now",
+  aiGenerated: false,
+  lastUpdated: "",
 };
 
-const initialSources: KnowledgeSource[] = [
-  {
-    id: "src-1",
-    type: "website",
-    title: "Website Documentation",
-    identifier: "acme.com",
-    status: "synced",
-    pagesCount: 142,
-    lastUpdatedMinutesAgo: 4,
-    description: "Full crawl of marketing site, public pricing, and customer help center articles.",
-  },
-  {
-    id: "src-2",
-    type: "pdf",
-    title: "Pricing & Billing Guide.pdf",
-    identifier: "Pricing Guide.pdf",
-    status: "indexed",
-    pagesCount: 32,
-    lastUpdatedMinutesAgo: 48,
-    description: "Detailed tier breakdown, seat add-ons, enterprise SLAs, and credit rollover policies.",
-  },
-  {
-    id: "src-3",
-    type: "document",
-    title: "Customer Support Playbook",
-    identifier: "Playbook_v4.2.docx",
-    status: "synced",
-    pagesCount: 84,
-    lastUpdatedMinutesAgo: 120,
-    description: "Standard escalation trees, refund authorization thresholds, and technical triage guides.",
-  },
-  {
-    id: "src-4",
-    type: "manual",
-    title: "Security & SOC2 Fact Sheet",
-    identifier: "compliance/soc2-overview",
-    status: "synced",
-    pagesCount: 18,
-    lastUpdatedMinutesAgo: 360,
-    description: "Data encryption in transit, customer tenant isolation, and GDPR data processing addendums.",
-  },
-];
+const initialSources: KnowledgeSource[] = [];
 
 const initialActions: AgentAction[] = [
   {

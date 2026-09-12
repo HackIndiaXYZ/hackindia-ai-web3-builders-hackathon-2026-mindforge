@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/navigation/navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,9 @@ interface MessageItem {
 
 export default function DedicatedAIPage() {
   const params = useParams();
-  const slug = (params?.slug as string) || "sweet-crust-bakery";
+  const searchParams = useSearchParams();
+  const slug = (params?.slug as string) || "";
+  const isWidgetMode = searchParams?.get("widget") === "true";
   const { toast } = useToast();
 
   const [workspaceData, setWorkspaceData] = useState<WorkspaceDetail | null>(null);
@@ -57,7 +59,7 @@ export default function DedicatedAIPage() {
   const [embedModalOpen, setEmbedModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const embedSnippet = `<script src="https://agentforge.onrender.com/static/widget.js" data-slug="${slug}" defer></script>`;
+  const embedSnippet = `<script src="https://cdn.agentforge.ai/v1/embed.js" data-slug="${slug || "your-slug"}" async></script>`;
 
   // 1. Fetch Workspace data
   useEffect(() => {
@@ -192,6 +194,84 @@ export default function DedicatedAIPage() {
   };
 
   const businessName = workspaceData?.workspace.name || slug.replace(/-/g, " ");
+
+  if (isWidgetMode) {
+    return (
+      <div className="h-screen w-full flex flex-col bg-surface text-primary-text font-sans overflow-hidden">
+        {/* Compact Widget Header */}
+        <div className="p-3 border-b border-border bg-secondary-surface/80 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-primary-text text-background flex items-center justify-center font-bold text-[10px]">
+              <Bot className="w-3.5 h-3.5" />
+            </div>
+            <div>
+              <span className="font-semibold text-primary-text block capitalize text-xs leading-tight">
+                {businessName}
+              </span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                AI Employee Live
+              </span>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono text-muted-text">Powered by AgentForge</span>
+        </div>
+
+        {/* Message Stream */}
+        <div className="flex-1 p-3 overflow-y-auto space-y-3 text-xs">
+          {messages.map((m) => {
+            const isUser = m.role === "user";
+            return (
+              <div key={m.id} className={`flex gap-2 ${isUser ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`p-3 rounded-xl text-xs leading-relaxed max-w-[85%] space-y-1.5 ${
+                    isUser
+                      ? "bg-primary-text text-background rounded-br-none"
+                      : "bg-secondary-surface text-primary-text border border-border rounded-bl-none"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{m.content}</p>
+                </div>
+              </div>
+            );
+          })}
+          {isTyping && (
+            <div className="flex gap-2 items-center">
+              <div className="p-2 rounded bg-secondary-surface border border-border flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-text animate-bounce" />
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-text animate-bounce [animation-delay:0.2s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-text animate-bounce [animation-delay:0.4s]" />
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Compact Input Form */}
+        <div className="p-2.5 border-t border-border bg-surface">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSend();
+            }}
+            className="flex items-center gap-1.5"
+          >
+            <input
+              type="text"
+              placeholder="Type your question..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={isTyping}
+              className="flex-1 px-3 py-2 text-xs rounded-lg border border-border bg-secondary-surface text-primary-text focus:outline-none focus:ring-1 focus:ring-primary-text placeholder:text-muted-text"
+            />
+            <Button type="submit" size="sm" variant="primary" disabled={!input.trim() || isTyping}>
+              <Send className="w-3.5 h-3.5" />
+            </Button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-primary-text flex flex-col selection:bg-neutral-800 selection:text-white">

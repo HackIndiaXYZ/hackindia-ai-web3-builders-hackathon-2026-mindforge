@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/logo";
+import { useAuth } from "@/lib/auth";
+import { usePlanTier } from "@/lib/plan-tier";
 import {
   LayoutDashboard,
   Brain,
@@ -18,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Sliders,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -27,12 +30,15 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const { config } = usePlanTier();
 
   const mainNav = [
     { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
     { label: "Business Brain", href: "/dashboard/business-brain", icon: Brain },
     { label: "Knowledge", href: "/dashboard/knowledge", icon: Database },
     { label: "Instructions", href: "/dashboard/instructions", icon: FileCode2 },
+    { label: "Actions & Tools", href: "/dashboard/actions", icon: Sliders },
     { label: "Deploy", href: "/dashboard/deploy", icon: Send },
     { label: "Conversations", href: "/dashboard/conversations", icon: MessageSquare },
     { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
@@ -82,7 +88,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
       <div>
         {/* Brand header */}
         <div className="h-14 px-4 flex items-center justify-between border-b border-border">
-          <Logo size={26} showText={!collapsed} subtitle="Enterprise" />
+          <Logo size={26} showText={!collapsed} subtitle={config.badgeLabel} />
 
           <button
             onClick={onToggleCollapse}
@@ -125,12 +131,19 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
           )}
         >
           <div className="w-7 h-7 rounded-full bg-secondary-surface border border-border flex items-center justify-center text-xs font-medium text-primary-text flex-shrink-0">
-            AC
+            {((user?.full_name || user?.email || "AF").slice(0, 2)).toUpperCase()}
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-primary-text truncate">Acme Technologies</p>
-              <p className="text-[11px] text-muted-text truncate font-mono">admin@acme.com</p>
+              <div className="flex items-center justify-between gap-1">
+                <p className="text-xs font-medium text-primary-text truncate">
+                  {user?.full_name || user?.email?.split("@")[0] || "My Workspace"}
+                </p>
+                <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-secondary-surface border border-border text-secondary-text shrink-0">
+                  {config.name.split(" ")[0]}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-text truncate font-mono">{user?.email || "Signed in"}</p>
             </div>
           )}
         </div>
