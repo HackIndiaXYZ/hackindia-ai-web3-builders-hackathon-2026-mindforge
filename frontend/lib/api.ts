@@ -171,16 +171,28 @@ export const MOCK_CATEGORIES = [
 ];
 
 export function getApiBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  if (typeof window !== "undefined") {
+  let url = process.env.NEXT_PUBLIC_API_URL?.trim() || "";
+
+  if (!url && typeof window !== "undefined") {
     const host = window.location.hostname;
     if (host === "localhost" || host === "127.0.0.1") {
-      return "http://localhost:8000/api/v1";
+      url = "http://localhost:8000/api/v1";
     }
   }
-  return "https://agentforge.onrender.com/api/v1";
+
+  if (!url) {
+    url = "https://agentforge.onrender.com/api/v1";
+  }
+
+  // Strip all trailing slashes
+  url = url.replace(/\/+$/, "");
+
+  // Automatically append /api/v1 if not present
+  if (!url.endsWith("/api/v1")) {
+    url = `${url}/api/v1`;
+  }
+
+  return url;
 }
 
 export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -197,12 +209,14 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
   const isHeavyCall = endpoint.includes("/onboarding") || endpoint.includes("/deploy") || endpoint.includes("/knowledge");
   const timeoutMs = isHeavyCall ? 60000 : 20000;
   const baseUrl = getApiBaseUrl();
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const targetUrl = `${baseUrl}${cleanEndpoint}`;
 
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const response = await fetch(`${baseUrl}${endpoint}`, {
+    const response = await fetch(targetUrl, {
       ...options,
       headers,
       signal: controller.signal,
