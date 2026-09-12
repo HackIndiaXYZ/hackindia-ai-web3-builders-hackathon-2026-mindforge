@@ -5,12 +5,22 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAgentForge } from "@/lib/mock-data";
-import { ArrowRight, ArrowLeft, Check, CheckSquare, Square } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  CheckSquare,
+  Square,
+  Sparkles,
+  Shield,
+  HelpCircle,
+} from "lucide-react";
 
 interface QuestionStep {
-  id: string;
+  id: "purpose" | "escalation" | "tone";
+  pillLabel: string;
   question: string;
-  description?: string;
+  description: string;
   instructionHint: string;
   options: string[];
 }
@@ -18,37 +28,41 @@ interface QuestionStep {
 const QUESTIONS: QuestionStep[] = [
   {
     id: "purpose",
-    question: "What should your agent help customers with most often?",
-    description: "Determines the priority grounding weights and tool invocation rules.",
-    instructionHint: "Choose one, multiple, or all operational scopes.",
+    pillLabel: "01 Operational Scopes",
+    question: "What should your AI employee assist customers with most often?",
+    description: "Configures priority knowledge grounding, vector similarity weights, and autonomous tools.",
+    instructionHint: "Choose one, multiple, or all operational scopes that apply to your business.",
     options: [
-      "Customer support and product questions",
-      "Sales qualification & demo scheduling",
-      "Billing & operational account inquiries",
-      "Technical API troubleshooting",
+      "Customer support and product catalog questions",
+      "Sales lead qualification & demo consultation booking",
+      "Billing, payment inquiries, and invoice questions",
+      "Technical troubleshooting & service onboarding guides",
     ],
   },
   {
     id: "escalation",
-    question: "When should the agent escalate to a human team member?",
-    description: "Defines autonomous boundary rules for employee handoff.",
-    instructionHint: "Select all policies that require human review.",
+    pillLabel: "02 Escalation Boundaries",
+    question: "When should the agent escalate directly to a human team member?",
+    description: "Defines deterministic safety guardrails for employee handoff and email notifications.",
+    instructionHint: "Select all policies and conditions that require mandatory human review.",
     options: [
-      "Refund requests over $250 or angry sentiment",
-      "Any issue requiring database mutation or refunds",
-      "Only when confidence falls below 85%",
+      "Refund disputes over $250 or angry customer sentiment",
+      "Any request requiring direct database mutation or cancellation",
+      "When knowledge confidence score falls below 80%",
       "Always attempt resolution before offering human transfer",
     ],
   },
   {
     id: "tone",
-    question: "What demeanor should your agent embody?",
-    description: "Applied as deterministic tone guardrails.",
-    instructionHint: "Select the tone traits that represent your brand.",
+    pillLabel: "03 Brand Tone & Demeanor",
+    question: "What demeanor and voice should your agent embody?",
+    description: "Applied as system prompt constraints across all customer conversations.",
+    instructionHint: "Select the tone traits that best represent your company culture.",
     options: [
       "Professional, concise, and technical",
       "Friendly, consultative, and empathetic",
       "Direct, brief, and action-driven",
+      "Formal, diplomatic, and enterprise-grade",
     ],
   },
 ];
@@ -61,8 +75,8 @@ export default function OnboardingInterviewPage() {
 
   // Multi-select state: array of selected options per question
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string[]>>({
-    purpose: ["Customer support and product questions"],
-    escalation: ["Refund requests over $250 or angry sentiment"],
+    purpose: ["Customer support and product catalog questions"],
+    escalation: ["Refund disputes over $250 or angry customer sentiment"],
     tone: ["Professional, concise, and technical"],
   });
 
@@ -76,7 +90,6 @@ export default function OnboardingInterviewPage() {
     setSelectedAnswers((prev) => {
       const currentList = prev[currentQ.id] || [];
       if (currentList.includes(opt)) {
-        // Allow removing, but keep at least 1 item
         if (currentList.length === 1) return prev;
         return {
           ...prev,
@@ -102,12 +115,10 @@ export default function OnboardingInterviewPage() {
     if (currentQIndex < QUESTIONS.length - 1) {
       setCurrentQIndex((prev) => prev + 1);
     } else {
-      // Sync all selections to business brain and instructions
       const purposeList = selectedAnswers["purpose"] || [];
       const escalationList = selectedAnswers["escalation"] || [];
       const toneList = selectedAnswers["tone"] || [];
 
-      // Extract tone traits
       const extractedTraits = toneList
         .flatMap((t) => t.split(","))
         .map((t) => t.trim().replace("and ", ""))
@@ -144,95 +155,158 @@ export default function OnboardingInterviewPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2 text-[11px] font-mono text-muted-text uppercase tracking-wider">
-            <span>
-              Question {currentQIndex + 1} of {QUESTIONS.length}
-            </span>
-            <span>•</span>
-            <span>Structured Interview</span>
-          </div>
-
-          <span className="text-[11px] font-mono text-secondary-text">
-            {activeSelections.length} of {currentQ.options.length} selected
-          </span>
-        </div>
-
-        <h2 className="text-2xl font-semibold text-primary-text tracking-tight">
-          Configure your agent
-        </h2>
-        <p className="text-xs text-secondary-text mt-1">{currentQ.question}</p>
-        <p className="text-[11px] text-muted-text mt-0.5">{currentQ.instructionHint}</p>
-      </div>
-
-      {/* Select All / Choose All Action Bar */}
-      <div className="flex items-center justify-between pt-1 pb-1 border-b border-border/60">
-        <span className="text-xs text-secondary-text font-medium">Available scopes</span>
-        <button
-          type="button"
-          onClick={handleSelectAll}
-          className="text-xs text-secondary-text hover:text-primary-text font-mono transition-colors inline-flex items-center gap-1.5 py-1 px-2 rounded hover:bg-secondary-surface"
-        >
-          {isAllSelected ? (
-            <>
-              <CheckSquare className="w-3.5 h-3.5 text-primary-text" />
-              <span>Deselect all</span>
-            </>
-          ) : (
-            <>
-              <Square className="w-3.5 h-3.5 text-muted-text" />
-              <span>Choose all options</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Multi-Select Options List */}
-      <div className="space-y-2.5 pt-1">
-        {currentQ.options.map((opt) => {
-          const active = isSelected(opt);
-          return (
+    <div className="w-full space-y-8 animate-in fade-in duration-200">
+      {/* Header & Step Pills */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {QUESTIONS.map((q, idx) => (
             <button
-              key={opt}
-              type="button"
-              onClick={() => toggleOption(opt)}
-              className={`w-full flex items-center justify-between p-3.5 rounded border text-left text-xs transition-all select-none group ${
-                active
-                  ? "border-primary-text bg-secondary-surface text-primary-text font-medium shadow-subtle"
-                  : "border-border bg-surface text-secondary-text hover:border-muted-text hover:bg-secondary-surface/40"
+              key={q.id}
+              onClick={() => setCurrentQIndex(idx)}
+              className={`px-3 py-1 rounded-full text-xs font-mono transition-all cursor-pointer ${
+                idx === currentQIndex
+                  ? "bg-primary-text text-background font-semibold shadow-subtle"
+                  : idx < currentQIndex
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                  : "bg-secondary-surface text-secondary-text border border-border"
               }`}
             >
-              <span className="pr-4">{opt}</span>
-
-              {/* Tactile Checkbox Box */}
-              <div
-                className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
-                  active
-                    ? "border-primary-text bg-primary-text text-background"
-                    : "border-border bg-surface group-hover:border-muted-text"
-                }`}
-              >
-                {active && <Check className="w-3 h-3 stroke-[2.5]" />}
-              </div>
+              {q.pillLabel}
             </button>
-          );
-        })}
+          ))}
+        </div>
+
+        <h1 className="text-3xl sm:text-4xl font-semibold text-primary-text tracking-tight">
+          {currentQ.question}
+        </h1>
+        <p className="text-xs sm:text-sm text-secondary-text max-w-2xl leading-relaxed">
+          {currentQ.description}
+        </p>
       </div>
 
-      {/* Navigation footer */}
-      <div className="pt-4 flex items-center justify-between border-t border-border">
-        <Button variant="ghost" size="md" onClick={handlePrev}>
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back
+      {/* Spacious 2-Column Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Column: Interactive Options Grid */}
+        <div className="lg:col-span-8 bg-surface border border-border rounded-xl shadow-subtle p-6 sm:p-8 space-y-6">
+          <div className="flex items-center justify-between pb-3 border-b border-border">
+            <span className="text-xs font-medium text-secondary-text">
+              {currentQ.instructionHint}
+            </span>
+
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              className="text-xs text-secondary-text hover:text-primary-text font-mono transition-colors inline-flex items-center gap-1.5 py-1 px-2.5 rounded hover:bg-secondary-surface cursor-pointer"
+            >
+              {isAllSelected ? (
+                <>
+                  <CheckSquare className="w-3.5 h-3.5 text-primary-text" />
+                  <span>Deselect all</span>
+                </>
+              ) : (
+                <>
+                  <Square className="w-3.5 h-3.5 text-muted-text" />
+                  <span>Select all</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* 2-Column Options Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {currentQ.options.map((opt) => {
+              const active = isSelected(opt);
+              return (
+                <div
+                  key={opt}
+                  onClick={() => toggleOption(opt)}
+                  className={`p-5 rounded-xl border text-left text-xs transition-all select-none cursor-pointer flex flex-col justify-between gap-4 ${
+                    active
+                      ? "border-primary-text bg-secondary-surface text-primary-text font-medium shadow-subtle ring-1 ring-primary-text/20"
+                      : "border-border bg-surface text-secondary-text hover:border-muted-text hover:bg-secondary-surface/40"
+                  }`}
+                >
+                  <span className="leading-relaxed text-xs">{opt}</span>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                    <span className="text-[11px] font-mono text-muted-text">
+                      {active ? "Active Rule" : "Optional"}
+                    </span>
+                    <div
+                      className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
+                        active
+                          ? "border-primary-text bg-primary-text text-background"
+                          : "border-border bg-surface"
+                      }`}
+                    >
+                      {active && <Check className="w-3 h-3 stroke-[2.5]" />}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right Column: Live Guardrail Synthesis Preview */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="p-6 rounded-xl border border-border bg-surface shadow-subtle space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-secondary-text uppercase tracking-wider font-mono">
+                Live Guardrail Draft
+              </span>
+              <Sparkles className="w-4 h-4 text-emerald-500" />
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3.5 rounded-lg bg-secondary-surface/60 border border-border space-y-1.5">
+                <span className="text-[11px] font-semibold text-secondary-text uppercase font-mono block">
+                  Configured Scopes:
+                </span>
+                <p className="text-primary-text font-medium leading-relaxed">
+                  {selectedAnswers["purpose"]?.join(", ") || "Support"}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-secondary-surface/60 border border-border space-y-1.5">
+                <span className="text-[11px] font-semibold text-secondary-text uppercase font-mono block">
+                  Escalation Triggers:
+                </span>
+                <p className="text-primary-text font-medium leading-relaxed">
+                  {selectedAnswers["escalation"]?.join("; ") || "Standard transfer"}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-secondary-surface/60 border border-border space-y-1.5">
+                <span className="text-[11px] font-semibold text-secondary-text uppercase font-mono block">
+                  Tone Profile:
+                </span>
+                <p className="text-primary-text font-medium leading-relaxed">
+                  {selectedAnswers["tone"]?.join(", ") || "Professional"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Footer */}
+      <div className="pt-6 flex items-center justify-between border-t border-border">
+        <Button variant="ghost" size="md" onClick={handlePrev} className="cursor-pointer">
+          <ArrowLeft className="w-4 h-4 mr-1.5" />
+          <span>Back</span>
         </Button>
 
-        <Button variant="primary" size="lg" onClick={handleNext} className="group">
+        <Button
+          variant="primary"
+          size="lg"
+          onClick={handleNext}
+          className="group shadow-subtle cursor-pointer"
+        >
           <span>
-            {currentQIndex === QUESTIONS.length - 1 ? "Synthesize Brain" : "Continue"}
+            {currentQIndex === QUESTIONS.length - 1 ? "Synthesize Business Brain" : "Next Question"}
           </span>
-          <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+          <ArrowRight className="w-4 h-4 ml-1.5 transition-transform group-hover:translate-x-0.5" />
         </Button>
       </div>
     </div>

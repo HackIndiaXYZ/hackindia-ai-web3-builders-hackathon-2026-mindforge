@@ -218,7 +218,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-background text-primary-text flex flex-col selection:bg-neutral-800 selection:text-white">
       <Navbar />
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-12 space-y-8">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-6 sm:px-10 py-10 space-y-8">
         {/* Step Indicator Header */}
         <div className="flex items-center justify-between pb-4 border-b border-border text-xs">
           <div className="flex items-center gap-2">

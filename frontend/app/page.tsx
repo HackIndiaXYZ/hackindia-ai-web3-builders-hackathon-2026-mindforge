@@ -264,8 +264,7 @@ export default function HomePage() {
             </div>
 
             {/* Status Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-secondary-surface text-xs text-secondary-text">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-border bg-secondary-surface text-xs text-secondary-text">
               <span>AgentForge Platform • Autonomous Business Operations</span>
             </div>
 

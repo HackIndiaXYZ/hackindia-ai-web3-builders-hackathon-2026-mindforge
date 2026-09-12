@@ -6,8 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ActionConfirmModal } from "@/components/agent/action-confirm-modal";
-import { useAgentForge } from "@/lib/mock-data";
-import { ArrowRight, ArrowLeft, ShieldAlert } from "lucide-react";
+import { useAgentForge, AgentAction } from "@/lib/mock-data";
+import {
+  ArrowRight,
+  ArrowLeft,
+  Shield,
+  Lock,
+  Sliders,
+  Instagram,
+  Facebook,
+  Database,
+  Sparkles,
+} from "lucide-react";
 
 export default function OnboardingActionsPage() {
   const router = useRouter();
@@ -28,50 +38,100 @@ export default function OnboardingActionsPage() {
     }
   };
 
+  const getActionIcon = (act: AgentAction) => {
+    if (act.category === "social" && act.id.includes("instagram")) {
+      return <Instagram className="w-4 h-4 text-pink-500" />;
+    }
+    if (act.category === "social" && act.id.includes("facebook")) {
+      return <Facebook className="w-4 h-4 text-blue-500" />;
+    }
+    if (act.category === "database") {
+      return <Database className="w-4 h-4 text-amber-500" />;
+    }
+    if (act.category === "security") {
+      return <Lock className="w-4 h-4 text-emerald-500" />;
+    }
+    if (act.category === "finance") {
+      return <Shield className="w-4 h-4 text-purple-500" />;
+    }
+    return <Sliders className="w-4 h-4 text-secondary-text" />;
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-8 animate-in fade-in duration-200">
+      {/* Header */}
       <div>
-        <div className="flex items-center gap-3 text-xs text-secondary-text mb-1">
-          <span className="font-semibold text-primary-text">{enabledCount} enabled</span>
+        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border bg-secondary-surface text-xs text-secondary-text mb-2 font-mono">
+          <span>Step 05 • Action Permissions</span>
           <span>•</span>
-          <span className="text-amber-600 dark:text-amber-400">{reviewCount} needs review</span>
+          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{enabledCount} enabled</span>
         </div>
-        <h2 className="text-2xl font-semibold text-primary-text tracking-tight">
-          Configure Agent Actions
-        </h2>
-        <p className="text-xs text-secondary-text mt-1">
-          Select which tool capabilities the agent is authorized to autonomously execute.
+        <h1 className="text-3xl sm:text-4xl font-semibold text-primary-text tracking-tight">
+          Authorize Agent Actions & Capabilities
+        </h1>
+        <p className="text-xs sm:text-sm text-secondary-text mt-1.5 max-w-2xl leading-relaxed">
+          Specify which autonomous tools and external side-effects your AI employee is authorized to invoke during customer interactions.
         </p>
       </div>
 
-      <div className="space-y-3 pt-2">
+      {/* Spacious 2-Column Action Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
         {actions.map((act) => (
           <div
             key={act.id}
-            className="p-4 rounded border border-border bg-surface flex items-start justify-between gap-4 transition-colors hover:border-muted-text/40"
+            className={`p-5 rounded-xl border flex flex-col justify-between gap-4 transition-all ${
+              act.enabled
+                ? "border-primary-text/40 bg-surface shadow-subtle ring-1 ring-primary-text/10"
+                : "border-border bg-surface/70 hover:border-muted-text/40"
+            }`}
           >
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-primary-text">{act.name}</span>
-                {act.requiresConfirmation && (
-                  <Badge variant="warning" size="sm">
-                    Requires confirmation
-                  </Badge>
-                )}
-                {act.needsReview && (
-                  <Badge variant="outline" size="sm">
-                    Needs review
-                  </Badge>
-                )}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-lg bg-secondary-surface border border-border">
+                    {getActionIcon(act)}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-primary-text">{act.name}</h3>
+                    {act.tier && (
+                      <span className="text-[10px] font-mono text-muted-text uppercase">
+                        {act.tier} tier
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-0.5">
+                  <Switch
+                    checked={act.enabled}
+                    onCheckedChange={() =>
+                      handleToggle(act.id, act.requiresConfirmation && !act.enabled)
+                    }
+                  />
+                </div>
               </div>
-              <p className="text-xs text-secondary-text leading-relaxed">{act.description}</p>
+
+              <p className="text-xs text-secondary-text leading-relaxed pt-1">
+                {act.description}
+              </p>
             </div>
 
-            <div className="pt-0.5">
-              <Switch
-                checked={act.enabled}
-                onCheckedChange={() => handleToggle(act.id, act.requiresConfirmation && !act.enabled)}
-              />
+            <div className="flex items-center gap-2 pt-2 border-t border-border/50 text-[11px] font-mono">
+              {act.requiresConfirmation && (
+                <Badge variant="warning" size="sm" className="text-[10px]">
+                  Requires human confirmation
+                </Badge>
+              )}
+              {act.needsReview && (
+                <Badge variant="outline" size="sm" className="text-[10px]">
+                  Needs review
+                </Badge>
+              )}
+              {!act.requiresConfirmation && !act.needsReview && (
+                <span className="text-muted-text">
+                  {act.enabled ? "● Autonomous invocation" : "Inactive"}
+                </span>
+              )}
             </div>
           </div>
         ))}
@@ -88,20 +148,26 @@ export default function OnboardingActionsPage() {
         }}
       />
 
-      <div className="pt-4 flex items-center justify-between border-t border-border">
-        <Button variant="ghost" size="md" onClick={() => router.push("/onboarding/brain")}>
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back
+      {/* Navigation Footer */}
+      <div className="pt-6 flex items-center justify-between border-t border-border">
+        <Button
+          variant="ghost"
+          size="md"
+          onClick={() => router.push("/onboarding/brain")}
+          className="cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1.5" />
+          <span>Back to Brain</span>
         </Button>
 
         <Button
           variant="primary"
           size="lg"
           onClick={() => router.push("/onboarding/test")}
-          className="group"
+          className="group shadow-subtle cursor-pointer"
         >
-          <span>Proceed to Test</span>
-          <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+          <span>Proceed to Test Console</span>
+          <ArrowRight className="w-4 h-4 ml-1.5 transition-transform group-hover:translate-x-0.5" />
         </Button>
       </div>
     </div>

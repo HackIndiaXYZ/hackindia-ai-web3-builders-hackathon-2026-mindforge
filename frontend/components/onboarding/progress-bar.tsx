@@ -24,8 +24,8 @@ export function OnboardingProgressBar() {
   const activeIndex = currentStepIndex === -1 ? 0 : currentStepIndex;
 
   return (
-    <div className="w-full bg-surface border-b border-border py-4 px-6 sticky top-0 z-30">
-      <div className="max-w-5xl mx-auto flex items-center justify-between">
+    <div className="w-full bg-surface/80 backdrop-blur-md border-b border-border py-3.5 sticky top-0 z-30 transition-colors">
+      <div className="max-w-7xl mx-auto px-6 sm:px-12 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <Logo size={22} showText={true} />
           <span className="text-muted-text text-xs">/</span>
